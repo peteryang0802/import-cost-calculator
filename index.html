@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>进口入仓成本估算</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e7490'/%3E%3Cpath d='M9 13l7-4 7 4v8l-7 4-7-4z' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/%3E%3Cpath d='M13 17h6M16 14v6' stroke='white' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --blue:#2563eb; --green:#059669; --orange:#ea580c; --purple:#7c3aed; --cyan:#0891b2;
+  --ink:#0f2d35; --slate:#475569; --line:#e2e8f0; --bg:#f4f6f8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",sans-serif;
+  background:var(--bg);color:#1e293b;line-height:1.5;font-size:15px;
+}
+.wrap{max-width:1040px;margin:0 auto;padding:18px 16px 36px}
+
+/* ===== 顶部 ===== */
+header h1{font-size:22px;color:var(--ink)}
+header p{color:var(--slate);font-size:13.5px;margin-top:4px}
+
+/* ===== 手机端吸顶成本条 ===== */
+.mobile-bar{
+  position:sticky;top:0;z-index:50;
+  background:linear-gradient(160deg,#0d3b42,#0f2d35);color:#fff;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:11px 16px;margin:14px -16px 16px;
+  box-shadow:0 6px 18px rgba(15,45,53,.25);
+}
+.mobile-bar .m-label{font-size:12.5px;color:#9fd3dc}
+.mobile-bar .m-val{font-size:21px;font-weight:800;font-variant-numeric:tabular-nums}
+.mobile-bar .m-val small{font-size:13px;margin-right:1px}
+
+/* ===== 布局 ===== */
+.layout{display:grid;grid-template-columns:1fr;gap:16px}
+.card{background:#fff;border-radius:16px;padding:18px 16px;box-shadow:0 1px 3px rgba(15,45,53,.08),0 8px 24px rgba(15,45,53,.05)}
+
+/* 小节标题 */
+.sec{margin-bottom:18px;min-width:0}
+.sec:last-child{margin-bottom:0}
+.sec-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:9px}
+.dot{width:9px;height:9px;border-radius:3px;flex:none}
+.s-blue .dot{background:var(--blue)} .s-green .dot{background:var(--green)}
+.s-orange .dot{background:var(--orange)} .s-purple .dot{background:var(--purple)}
+
+/* ===== 输入 ===== */
+input[type=text],input[type=number]{
+  width:100%;border:1px solid var(--line);border-radius:10px;padding:12px;
+  font-size:16px;color:#1e293b;outline:none;min-width:0;font-family:inherit;
+  transition:border-color .15s,box-shadow .15s;
+}
+input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(8,145,178,.12)}
+
+/* 分段按钮 */
+.seg{display:grid;gap:6px;background:#f1f5f9;border-radius:11px;padding:4px}
+.seg.c2{grid-template-columns:repeat(2,1fr)}
+.seg.c3{grid-template-columns:repeat(3,1fr)}
+.seg.c4{grid-template-columns:repeat(4,1fr)}
+.seg button{border:0;background:transparent;border-radius:8px;padding:10px 2px;font-size:13.5px;font-weight:600;
+  color:var(--slate);cursor:pointer;font-family:inherit;min-height:46px;transition:background .15s,color .15s}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(15,45,53,.15)}
+.seg.blue button.on{color:var(--blue)} .seg.green button.on{color:var(--green)}
+.seg.orange button.on{color:var(--orange)} .seg.purple button.on{color:var(--purple)}
+
+/* 带后缀输入 */
+.input-suffix{position:relative}
+.input-suffix input{padding-right:50px}
+.input-suffix .unit{position:absolute;right:12px;top:50%;transform:translateY(-50%);
+  font-size:13px;color:#94a3b8;font-weight:600;pointer-events:none}
+
+/* 小注释 */
+.mini-note{font-size:12px;color:#94a3b8;margin-top:6px;line-height:1.5}
+.mini-note.b{color:#9a3412}
+
+/* ===== 结果卡 ===== */
+.result{background:linear-gradient(160deg,#0d3b42 0%,#0f2d35 100%);color:#fff;border-radius:16px;
+  padding:20px 16px;box-shadow:0 12px 32px rgba(15,45,53,.22)}
+.result .r-label{font-size:13px;color:#9fd3dc}
+.result .r-big{font-size:32px;font-weight:800;margin:5px 0 2px;font-variant-numeric:tabular-nums}
+.result .r-big small{font-size:15px;font-weight:600;margin-right:2px}
+.result .r-note{font-size:12px;color:#7fb8c2;margin-bottom:13px}
+.r-table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+.r-table th,.r-table td{padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.09);
+  text-align:left;vertical-align:middle;word-break:break-word}
+.r-table th{color:#9fd3dc;font-weight:400;width:56%}
+.r-table td{text-align:right;font-variant-numeric:tabular-nums}
+.r-table tr.subtotal th{color:#cfeff4;font-weight:700;border-bottom:1px solid rgba(255,255,255,.25)}
+.r-table tr.subtotal td{font-weight:700}
+.r-table tr.total th{color:#fff;font-weight:700;font-size:14px;border-bottom:0;padding-top:12px}
+.r-table tr.total td{font-weight:800;font-size:17px;border-bottom:0;padding-top:12px;color:#ffd166}
+.r-table .orig{display:block;font-size:11px;color:#7fb8c2}
+.r-extra{margin-top:12px;background:rgba(255,255,255,.07);border-radius:11px;padding:10px 12px;
+  font-size:12.5px;color:#cfeff4}
+.r-extra b{color:#ffd166}
+.sticky{position:static}
+
+/* ===== 折叠区 ===== */
+details.opt{background:#fff;border-radius:16px;padding:2px 16px;box-shadow:0 1px 3px rgba(15,45,53,.08)}
+details.opt summary{padding:14px 0;font-weight:700;font-size:14.5px;color:var(--ink);cursor:pointer;min-height:44px}
+details.opt .opt-body{padding-bottom:16px}
+.two{display:grid;grid-template-columns:1fr;gap:12px}
+.opt .field{margin-bottom:12px}
+.opt .field:last-child{margin-bottom:0}
+.opt label{display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:5px}
+.check-row{display:flex;align-items:center;gap:9px;background:#f5f3ff;border:1px solid #ddd6fe;
+  border-radius:11px;padding:10px 12px;margin-bottom:12px}
+.check-row input{width:20px;height:20px;accent-color:var(--purple);min-height:44px;cursor:pointer}
+.check-row{font-size:13.5px;font-weight:600;color:#5b21b6}
+.link-note{background:#ecfeff;border:1px solid #a5f3fc;border-radius:10px;padding:10px 11px;
+  font-size:12.5px;color:#155e6b;line-height:1.55}
+.link-note b{color:#164e63}
+.link-note a{color:var(--cyan);font-weight:600;text-decoration:none;word-break:break-all}
+.btn-reset{width:100%;border:1px solid var(--line);background:#fff;border-radius:11px;
+  padding:12px;font-size:14px;font-weight:600;color:var(--slate);cursor:pointer;min-height:46px;font-family:inherit;margin-top:12px}
+.btn-reset:active{background:#f1f5f9}
+.src{margin-top:10px;font-size:11.5px;color:#94a3b8;line-height:1.7}
+.src a{color:var(--cyan);text-decoration:none}
+.warn{background:#fffbeb;border:1px solid #fde68a;border-radius:11px;padding:10px 12px;
+  font-size:12.5px;color:#92400e;margin-top:12px}
+
+@media (min-width:760px){
+  .two{grid-template-columns:1fr 1fr}
+  header h1{font-size:26px}
+}
+@media (min-width:960px){
+  .layout{grid-template-columns:1fr 390px;gap:20px;align-items:start}
+  .sticky{position:sticky;top:20px}
+  .mobile-bar{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>进口入仓成本估算</h1>
+    <p>户外服装、鞋靴、背包单件快速估算，国内段运费不计，结果只是预估值。</p>
+  </header>
+
+  <!-- 手机端吸顶条 -->
+  <div class="mobile-bar">
+    <span class="m-label">含税入仓成本（估算）</span>
+    <span class="m-val"><small>¥</small><span id="m-total">0.00</span></span>
+  </div>
+
+  <div class="layout">
+    <!-- ===== 输入卡 ===== -->
+    <section class="card">
+
+      <div class="sec s-blue">
+        <div class="sec-title"><span class="dot"></span>产品与产地</div>
+        <div class="field" style="margin-bottom:12px">
+          <input type="text" id="f-name" placeholder="产品名称（选填）">
+        </div>
+        <div class="field" style="margin-bottom:12px">
+          <div class="seg c2 blue" id="seg-term">
+            <button type="button" data-v="EXW" class="on">EXW 仓库提货</button>
+            <button type="button" data-v="FOB">FOB 装运港</button>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:12px">
+          <div class="seg c3 blue" id="seg-origin">
+            <button type="button" data-v="asean" class="on">东盟</button>
+            <button type="button" data-v="apta">亚太</button>
+            <button type="button" data-v="mfn">其他</button>
+          </div>
+          <div class="mini-note">东盟十国 0%（FORM E）｜亚太：孟加拉、印度、韩国，约 4%-5%｜其他：日本、欧洲、美国、中国，最惠国税率</div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <div class="seg c3 blue" id="seg-cat">
+            <button type="button" data-v="wear" class="on">户外服装</button>
+            <button type="button" data-v="shoes">户外鞋靴</button>
+            <button type="button" data-v="bag">户外背包</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec s-green">
+        <div class="sec-title"><span class="dot"></span>采购价格</div>
+        <div class="field" style="margin-bottom:12px">
+          <div class="seg c3 green" id="seg-ccy">
+            <button type="button" data-v="CNY">CNY</button>
+            <button type="button" data-v="USD" class="on">USD</button>
+            <button type="button" data-v="EUR">EUR</button>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <div class="input-suffix">
+            <input type="number" id="f-price" min="0" step="0.01" value="80">
+            <span class="unit" id="price-unit">USD</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec s-orange">
+        <div class="sec-title"><span class="dot"></span>运费与清关</div>
+        <div class="field" style="margin-bottom:12px">
+          <div class="input-suffix">
+            <input type="number" id="f-freight" min="0" step="0.01" value="1">
+            <span class="unit ccy-unit">USD</span>
+          </div>
+          <div class="mini-note b">海运、每票约千件粗估，可改：东盟近洋单件约 0.8-0.9 美元，远洋约 1.1-1.3；EXW 下已含出口国提货报关</div>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <div class="input-suffix">
+            <input type="number" id="f-clearance" min="0" step="0.01" value="6">
+            <span class="unit">CNY</span>
+          </div>
+          <div class="mini-note">清关服务费，按票收的先除以件数</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 结果卡 ===== -->
+    <div class="sticky">
+      <section class="result">
+        <div class="r-label">国内含税入仓成本（估算）</div>
+        <div class="r-big"><small>¥</small><span id="res-total">0.00</span></div>
+        <div class="r-note" id="res-note">当前为示例数据，替换左侧输入即重新计算</div>
+        <table class="r-table"><tbody id="res-body"></tbody></table>
+        <div class="r-extra" id="res-extra"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ===== 设置与口径（合并折叠） ===== -->
+  <details class="opt" style="margin-top:16px">
+    <summary>汇率、税率和计算口径（默认值直接可用）</summary>
+    <div class="opt-body">
+      <div class="two">
+        <div class="field">
+          <label>美元汇率（1 USD = ? CNY）</label>
+          <input type="number" id="r-usd" min="0" step="0.0001" value="6.6726">
+        </div>
+        <div class="field">
+          <label>欧元汇率（1 EUR = ? CNY）</label>
+          <input type="number" id="r-eur" min="0" step="0.0001" value="7.3562">
+        </div>
+      </div>
+      <div class="link-note" style="margin-top:12px">
+        <b>查牌价：中国银行外汇牌价</b><br>
+        <a href="https://www.boc.cn/sourcedb/whpj/" target="_blank" rel="noopener">boc.cn/sourcedb/whpj</a>，付汇看“现汇卖出价”；海关计税用月度计征汇率，申报时自动带出
+      </div>
+
+      <div class="check-row" style="margin-top:12px">
+        <input type="checkbox" id="f-cert" checked>
+        <label for="f-cert" style="margin:0">能提供优惠原产地证（FORM E / 亚太协定证书）</label>
+      </div>
+      <div class="two">
+        <div class="field">
+          <label>关税税率（%）</label>
+          <div class="input-suffix"><input type="number" id="f-duty" min="0" step="0.1" value="0"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <label>进口增值税率（%）</label>
+          <div class="input-suffix"><input type="number" id="f-vat" min="0" step="0.1" value="13"><span class="unit">%</span></div>
+        </div>
+      </div>
+
+      <div class="src" style="color:#334155;font-size:13px;line-height:1.8;margin-top:14px">
+        完税价格 =（采购价 + 国际运费）折人民币，海关计税口径，跟合同条款无关。<br>
+        关税：东盟 0%，亚太（孟加拉、印度、韩国）约 4%-5%，其他（日本、欧洲、美国、中国）最惠国（服装 8%、鞋 10%、背包 6%）。<br>
+        进口增值税 =（完税价格 + 关税）× 13%，这三类商品没有消费税。<br>
+        含税入仓成本 = 完税价格 + 关税 + 增值税 + 清关服务费。中国产复进口按最惠国算。
+      </div>
+      <div class="warn">快速预估工具，不是严谨计税表。注意：美国货目前在最惠国税率之外还有 <b>10% 加征关税</b>（另 24% 档暂时暂停，以税则委员会最新公告为准），本估算不含这部分，可在关税税率框手动加上；商品若获批市场化采购排除则不加征。其余以海关核定、货代和报关行账单为准。</div>
+      <div class="src">
+        来源：<a href="http://www.customs.gov.cn/customs/2024-10/29/article_2025112022584228900.html" target="_blank" rel="noopener">海关总署令第272号</a>；
+        <a href="https://m.mof.gov.cn/zcfb/202412/P020241230574609162479.pdf" target="_blank" rel="noopener">进出口税则（2025）</a>；
+        <a href="https://www.boc.cn/sourcedb/whpj/" target="_blank" rel="noopener">中国银行外汇牌价</a>；
+        <a href="https://gszx.mof.gov.cn/" target="_blank" rel="noopener">对美加征关税排除申报系统</a>
+      </div>
+      <button type="button" class="btn-reset" id="btn-reset">重置全部输入</button>
+    </div>
+  </details>
+</div>
+
+<script>
+/* ===== 固定选项 ===== */
+var CATS = [
+  {id:'wear',  mfn:8,  apta:5.2, freight:1.0},
+  {id:'shoes', mfn:10, apta:5.0, freight:1.2},
+  {id:'bag',   mfn:6,  apta:3.9, freight:1.2}
+];
+function catDef(id){for(var i=0;i<CATS.length;i++){if(CATS[i].id===id)return CATS[i]}return CATS[0]}
+
+var state = {
+  name:'', term:'EXW', origin:'asean', cat:'wear', ccy:'USD',
+  price:80, freight:1.0, clearance:6,
+  cert:true, duty:0, vat:13,
+  rates:{USD:6.6726, EUR:7.3562}
+};
+var DEFAULTS = JSON.parse(JSON.stringify(state));
+
+function $(id){return document.getElementById(id)}
+function num(v){var n=parseFloat(v);return isNaN(n)||n<0?0:n}
+function fmt(n){return n.toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2})}
+function rateOf(c){return c==='CNY'?1:state.rates[c]}
+
+/* 按产地、品类、证书自动定关税 */
+function autoDuty(){
+  var d = catDef(state.cat);
+  if(!state.cert) return d.mfn;
+  if(state.origin==='asean') return 0;
+  if(state.origin==='apta') return d.apta;
+  return d.mfn;
+}
+
+/* ===== 分段按钮通用绑定 ===== */
+function bindSeg(segId,key,color,after){
+  $(segId).addEventListener('click',function(e){
+    var b=e.target.closest('button');if(!b)return;
+    this.querySelectorAll('button').forEach(function(x){x.classList.remove('on')});
+    b.classList.add('on');state[key]=b.dataset.v;
+    if(after)after();recalc();
+  });
+}
+bindSeg('seg-term','term');
+bindSeg('seg-origin','origin','blue',function(){
+  state.duty=autoDuty();$('f-duty').value=state.duty;
+});
+bindSeg('seg-cat','cat','blue',function(){
+  var d=catDef(state.cat);
+  state.duty=autoDuty();$('f-duty').value=state.duty;
+  state.freight=d.freight;$('f-freight').value=d.freight;
+});
+bindSeg('seg-ccy','ccy','green',function(){
+  $('price-unit').textContent=state.ccy;
+  document.querySelectorAll('.ccy-unit').forEach(function(u){u.textContent=state.ccy});
+});
+
+/* ===== 证书、税率、汇率 ===== */
+$('f-cert').addEventListener('change',function(e){
+  state.cert=e.target.checked;
+  state.duty=autoDuty();$('f-duty').value=state.duty;
+});
+function bindNum(id,key){$(id).addEventListener('input',function(e){state[key]=num(e.target.value);recalc()})}
+bindNum('f-price','price');bindNum('f-freight','freight');bindNum('f-clearance','clearance');
+bindNum('f-duty','duty');bindNum('f-vat','vat');
+$('r-usd').addEventListener('input',function(e){state.rates.USD=num(e.target.value);recalc()});
+$('r-eur').addEventListener('input',function(e){state.rates.EUR=num(e.target.value);recalc()});
+$('f-name').addEventListener('input',function(e){state.name=e.target.value});
+
+/* ===== 重置 ===== */
+$('btn-reset').addEventListener('click',function(){
+  state=JSON.parse(JSON.stringify(DEFAULTS));
+  $('f-name').value='';$('f-price').value=state.price;$('f-freight').value=state.freight;
+  $('f-clearance').value=state.clearance;$('f-duty').value=state.duty;$('f-vat').value=state.vat;
+  $('r-usd').value=state.rates.USD;$('r-eur').value=state.rates.EUR;
+  $('f-cert').checked=true;
+  [['seg-term',state.term],['seg-origin',state.origin],['seg-cat',state.cat],['seg-ccy',state.ccy]].forEach(function(p){
+    document.querySelectorAll('#'+p[0]+' button').forEach(function(b){
+      b.classList.toggle('on',b.dataset.v===p[1])});
+  });
+  $('price-unit').textContent=state.ccy;
+  document.querySelectorAll('.ccy-unit').forEach(function(u){u.textContent=state.ccy});
+  recalc();
+});
+
+/* ===== 计算 ===== */
+function calc(){
+  var r=rateOf(state.ccy);
+  var priceRmb=state.price*r, freightRmb=state.freight*r;
+  var cif=priceRmb+freightRmb;
+  var duty=cif*state.duty/100;
+  var vat=(cif+duty)*state.vat/100;
+  var total=cif+duty+vat+state.clearance;
+  return {r:r,priceRmb:priceRmb,freightRmb:freightRmb,cif:cif,duty:duty,vat:vat,total:total};
+}
+
+function trow(cls,label,val,orig){
+  return '<tr'+(cls?' class="'+cls+'"':'')+'><th>'+label+
+    (orig?'<span class="orig">'+orig+'</span>':'')+'</th><td>'+fmt(val)+'</td></tr>';
+}
+function recalc(){
+  var x=calc();
+  $('m-total').textContent=fmt(x.total);
+  $('res-total').textContent=fmt(x.total);
+
+  var h=trow('',state.term==='EXW'?'采购价（EXW）':'采购价（FOB）',
+    x.priceRmb,fmt(state.price)+' '+state.ccy+' × '+fmt(x.r));
+  h+=trow('','国际段运费',x.freightRmb,fmt(state.freight)+' '+state.ccy);
+  h+=trow('subtotal','完税价格（计税口径）',x.cif);
+  h+=trow('','关税（'+fmt(state.duty)+'%）',x.duty);
+  h+=trow('','进口增值税（'+fmt(state.vat)+'%）',x.vat);
+  h+=trow('','清关服务费',state.clearance,'人民币');
+  h+=trow('total','含税入仓成本合计',x.total);
+  $('res-body').innerHTML=h;
+
+  var markup=x.total-x.priceRmb;
+  var pct=x.priceRmb>0?markup/x.priceRmb*100:0;
+  $('res-extra').innerHTML='相比采购价单件多花 <b>¥ '+fmt(markup)+'</b>，加成 <b>'+fmt(pct)+'%</b>';
+
+  var touched=state.name!==''||state.price!==DEFAULTS.price||state.freight!==DEFAULTS.freight;
+  $('res-note').textContent=touched?'结果为估算值，实际以海关核定为准':'当前为示例数据，替换左侧输入即重新计算';
+}
+recalc();
+</script>
+</body>
+</html>
